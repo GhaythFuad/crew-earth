@@ -1,0 +1,27 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic:
+        - text: "A: Artemis Crescent"
+        - generic: 16K + separate 8K clouds, sharp terminator
+      - generic: "1"
+    - generic [ref=e5]:
+      - generic:
+        - text: "B: Full Daylight"
+        - generic: 16K baked clouds, front-lit, warm tones
+      - generic: "2"
+    - generic [ref=e7]:
+      - generic:
+        - text: "C: Deep Space"
+        - generic: 16K + separate clouds, cooler palette, deep oceans
+      - generic: "3"
+    - generic [ref=e9]:
+      - generic:
+        - text: "D: Photorealistic"
+        - generic: 16K baked clouds, angled light, night lights
+      - generic: "4"
+  - generic [ref=e11]:
+    - text: "Textures:"
+    - link "Solar System Scope" [ref=e12] [cursor=pointer]:
+      - /url: https://www.solarsystemscope.com/textures/
+    - text: (CC BY 4.0)

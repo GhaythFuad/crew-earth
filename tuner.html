@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Texture Tuner</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a0a; color: #fff; font-family: system-ui, -apple-system, sans-serif; height: 100vh; display: flex; }
+
+  #image-container {
+    flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+  #image-container canvas {
+    max-width: 100%; max-height: 100vh; object-fit: contain;
+  }
+
+  #panel {
+    width: 300px; min-width: 300px; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);
+    border-left: 1px solid rgba(255,255,255,0.1); padding: 20px 18px;
+    overflow-y: auto; font-size: 12px;
+  }
+  #panel h3 {
+    font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.5);
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px;
+  }
+  .section-title {
+    font-size: 11px; font-weight: 600; color: rgba(100,160,255,0.6);
+    margin: 14px 0 8px; text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .control-group {
+    margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px;
+  }
+  .control-group:last-child { border-bottom: none; }
+  .control-group label {
+    font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.55);
+    text-transform: uppercase; letter-spacing: 0.3px;
+  }
+  .slider-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+  .slider-row input[type="range"] {
+    flex: 1; height: 4px; -webkit-appearance: none; appearance: none;
+    background: rgba(255,255,255,0.12); border-radius: 2px; outline: none; cursor: pointer;
+  }
+  .slider-row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
+    background: rgba(100, 160, 255, 0.9); cursor: pointer;
+  }
+  .val {
+    min-width: 38px; text-align: right; font-size: 11px;
+    color: rgba(255,255,255,0.4); font-variant-numeric: tabular-nums;
+  }
+
+  #output {
+    margin-top: 16px; padding: 10px; background: rgba(255,255,255,0.05);
+    border-radius: 6px; font-family: monospace; font-size: 10px;
+    color: rgba(255,255,255,0.5); word-break: break-all; line-height: 1.6;
+    white-space: pre-wrap;
+  }
+  .btn-row { display: flex; gap: 8px; margin-top: 12px; }
+  .btn-row button {
+    flex: 1; padding: 8px; background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 6px;
+    color: rgba(255,255,255,0.5); font-size: 11px; cursor: pointer;
+  }
+  .btn-row button:hover { background: rgba(255,255,255,0.15); }
+
+  #loading {
+    position: fixed; inset: 0; background: #0a0a0a; display: flex;
+    align-items: center; justify-content: center; z-index: 10;
+    color: rgba(255,255,255,0.4); font-size: 14px;
+  }
+  #loading.hidden { display: none; }
+
+  #panel::-webkit-scrollbar { width: 4px; }
+  #panel::-webkit-scrollbar-track { background: transparent; }
+  #panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+</style>
+</head>
+<body>
+  <div id="loading">Loading textures...</div>
+  <div id="image-container">
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <div id="panel">
+    <h3>Texture Tuner</h3>
+
+    <div class="section-title">Global</div>
+
+    <div class="control-group">
+      <label>Brightness</label>
+      <div class="slider-row">
+        <input type="range" id="g-brightness" min="50" max="200" step="1" value="100">
+        <span class="val" id="g-brightness-val">100%</span>
+      </div>
+    </div>
+    <div class="control-group">
+      <label>Contrast</label>
+      <div class="slider-row">
+        <input type="range" id="g-contrast" min="50" max="200" step="1" value="82">
+        <span class="val" id="g-contrast-val">82%</span>
+      </div>
+    </div>
+    <div class="control-group">
+      <label>Saturate</label>
+      <div class="slider-row">
+        <input type="range" id="g-saturate" min="0" max="300" step="1" value="76">
+        <span class="val" id="g-saturate-val">76%</span>
+      </div>
+    </div>
+
+    <div class="section-title">Water Only</div>
+
+    <div class="control-group">
+      <label>Brightness</label>
+      <div class="slider-row">
+        <input type="range" id="w-brightness" min="50" max="300" step="1" value="100">
+        <span class="val" id="w-brightness-val">100%</span>
+      </div>
+    </div>
+    <div class="control-group">
+      <label>Contrast</label>
+      <div class="slider-row">
+        <input type="range" id="w-contrast" min="50" max="200" step="1" value="100">
+        <span class="val" id="w-contrast-val">100%</span>
+      </div>
+    </div>
+    <div class="control-group">
+      <label>Saturate</label>
+      <div class="slider-row">
+        <input type="range" id="w-saturate" min="0" max="400" step="1" value="100">
+        <span class="val" id="w-saturate-val">100%</span>
+      </div>
+    </div>
+    <div class="control-group">
+      <label>Hue Shift</label>
+      <div class="slider-row">
+        <input type="range" id="w-hue" min="-60" max="60" step="1" value="0">
+        <span class="val" id="w-hue-val">0deg</span>
+      </div>
+    </div>
+
+    <div class="section-title">Values</div>
+    <div id="output"></div>
+
+    <div class="btn-row">
+      <button id="reset-btn">Reset All</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    let dayData, maskData, width, height;
+
+    // Load both images
+    const dayImg = new Image();
+    const maskImg = new Image();
+    let loaded = 0;
+
+    function onLoad() {
+      loaded++;
+      if (loaded < 2) return;
+      document.getElementById('loading').classList.add('hidden');
+
+      width = dayImg.width;
+      height = dayImg.height;
+      canvas.width = width;
+      canvas.height = height;
+
+      // Extract pixel data
+      const tmp = document.createElement('canvas');
+      tmp.width = width; tmp.height = height;
+      const tctx = tmp.getContext('2d');
+
+      tctx.drawImage(dayImg, 0, 0);
+      dayData = tctx.getImageData(0, 0, width, height);
+
+      // Mask may be different size, draw scaled
+      tctx.clearRect(0, 0, width, height);
+      tctx.drawImage(maskImg, 0, 0, width, height);
+      maskData = tctx.getImageData(0, 0, width, height);
+
+      render();
+    }
+
+    dayImg.onload = onLoad;
+    maskImg.onload = onLoad;
+    dayImg.src = '/textures/earth_4k.jpg';
+    maskImg.src = '/textures/2k_earth_specular_map.jpg';
+
+    // Slider bindings
+    const ids = ['g-brightness','g-contrast','g-saturate','w-brightness','w-contrast','w-saturate','w-hue'];
+    const defaults = { 'g-brightness':100, 'g-contrast':82, 'g-saturate':76, 'w-brightness':100, 'w-contrast':100, 'w-saturate':100, 'w-hue':0 };
+    const units = { 'g-brightness':'%','g-contrast':'%','g-saturate':'%','w-brightness':'%','w-contrast':'%','w-saturate':'%','w-hue':'deg' };
+    const els = {};
+
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      const valEl = document.getElementById(id + '-val');
+      els[id] = { el, valEl };
+      el.addEventListener('input', () => {
+        valEl.textContent = el.value + units[id];
+        render();
+      });
+    });
+
+    document.getElementById('reset-btn').addEventListener('click', () => {
+      ids.forEach(id => {
+        els[id].el.value = defaults[id];
+        els[id].valEl.textContent = defaults[id] + units[id];
+      });
+      render();
+    });
+
+    function clamp(v) { return v < 0 ? 0 : v > 255 ? 255 : v; }
+
+    function adjustPixel(r, g, b, brightness, contrast, saturate, hueDeg) {
+      // Brightness (multiply)
+      let br = brightness / 100;
+      r *= br; g *= br; b *= br;
+
+      // Contrast (around midpoint 128)
+      let cf = contrast / 100;
+      r = (r - 128) * cf + 128;
+      g = (g - 128) * cf + 128;
+      b = (b - 128) * cf + 128;
+
+      // Saturation
+      let sf = saturate / 100;
+      let gray = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      r = gray + sf * (r - gray);
+      g = gray + sf * (g - gray);
+      b = gray + sf * (b - gray);
+
+      // Hue rotation (simplified RGB rotation)
+      if (hueDeg !== 0) {
+        let rad = hueDeg * Math.PI / 180;
+        let cos = Math.cos(rad), sin = Math.sin(rad);
+        let rr = r, gg = g, bb = b;
+        r = rr * (0.213 + 0.787*cos - 0.213*sin) + gg * (0.715 - 0.715*cos - 0.715*sin) + bb * (0.072 - 0.072*cos + 0.928*sin);
+        g = rr * (0.213 - 0.213*cos + 0.143*sin) + gg * (0.715 + 0.285*cos + 0.140*sin) + bb * (0.072 - 0.072*cos - 0.283*sin);
+        b = rr * (0.213 - 0.213*cos - 0.787*sin) + gg * (0.715 - 0.715*cos + 0.715*sin) + bb * (0.072 + 0.928*cos + 0.072*sin);
+      }
+
+      return [clamp(Math.round(r)), clamp(Math.round(g)), clamp(Math.round(b))];
+    }
+
+    function render() {
+      if (!dayData) return;
+
+      const gb = +els['g-brightness'].el.value;
+      const gc = +els['g-contrast'].el.value;
+      const gs = +els['g-saturate'].el.value;
+      const wb = +els['w-brightness'].el.value;
+      const wc = +els['w-contrast'].el.value;
+      const ws = +els['w-saturate'].el.value;
+      const wh = +els['w-hue'].el.value;
+
+      const src = dayData.data;
+      const mask = maskData.data;
+      const out = ctx.createImageData(width, height);
+      const dst = out.data;
+
+      for (let i = 0; i < src.length; i += 4) {
+        let r = src[i], g = src[i+1], b = src[i+2];
+
+        // Apply global adjustments
+        [r, g, b] = adjustPixel(r, g, b, gb, gc, gs, 0);
+
+        // Water mask: specular map red channel (bright = water)
+        let waterAmount = mask[i] / 255;
+
+        if (waterAmount > 0.1) {
+          // Apply water-specific adjustments
+          let [wr, wg, wbb] = adjustPixel(r, g, b, wb, wc, ws, wh);
+          // Blend by mask
+          r = r + (wr - r) * waterAmount;
+          g = g + (wg - g) * waterAmount;
+          b = b + (wbb - b) * waterAmount;
+        }
+
+        dst[i] = clamp(Math.round(r));
+        dst[i+1] = clamp(Math.round(g));
+        dst[i+2] = clamp(Math.round(b));
+        dst[i+3] = 255;
+      }
+
+      ctx.putImageData(out, 0, 0);
+
+      // Update output
+      document.getElementById('output').textContent =
+        `Global: bright=${gb}% cont=${gc}% sat=${gs}%\nWater:  bright=${wb}% cont=${wc}% sat=${ws}% hue=${wh}deg`;
+    }
+  </script>
+</body>
+</html>

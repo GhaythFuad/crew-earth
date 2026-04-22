@@ -1,0 +1,17 @@
+{
+  "name": "earth",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.172.0"
+  },
+  "devDependencies": {
+    "rollup": "^4.60.2",
+    "vite": "^6.3.2"
+  }
+}

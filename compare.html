@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body { background: #111; color: #fff; font-family: system-ui; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; gap: 30px; }
+  .row { display: flex; gap: 40px; }
+  .swatch { text-align: center; }
+  .swatch div { width: 200px; height: 200px; border-radius: 12px; border: 2px solid rgba(255,255,255,0.15); }
+  .swatch p { margin-top: 10px; font-size: 14px; color: rgba(255,255,255,0.6); }
+  .swatch .hex { font-size: 12px; color: rgba(255,255,255,0.35); font-family: monospace; }
+  h2 { font-weight: 400; color: rgba(255,255,255,0.5); font-size: 16px; letter-spacing: 1px; text-transform: uppercase; }
+</style>
+</head>
+<body>
+  <h2>Ocean Water Color Comparison</h2>
+  <div class="row">
+    <div class="swatch">
+      <div style="background: #1B3B5E;"></div>
+      <p>Our Version</p>
+      <span class="hex">#1B3B5E</span>
+    </div>
+    <div class="swatch">
+      <div style="background: #4A7BB5;"></div>
+      <p>Google Earth</p>
+      <span class="hex">#4A7BB5</span>
+    </div>
+  </div>
+</body>
+</html>
