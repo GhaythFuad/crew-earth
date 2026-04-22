@@ -26,16 +26,17 @@ controls.maxDistance = 10;
 // ── Texture Loading (4K versions for performance) ──────────────────────
 const manager = new THREE.LoadingManager();
 const loader = new THREE.TextureLoader(manager);
+const assetUrl = (path) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
 
 manager.onLoad = () => {
   document.getElementById('loader')?.classList.add('hidden');
 };
 
-const dayMap = loader.load('/textures/earth_4k.jpg');
-const nightMap = loader.load('/textures/night_4k.jpg');
-const bumpMap = loader.load('/textures/elev_bump_4k.jpg');
-const cloudsMap = loader.load('/textures/fair_clouds_8k.jpg');
-const specularMap = loader.load('/textures/2k_earth_specular_map.jpg');
+const dayMap = loader.load(assetUrl('textures/earth_4k.jpg'));
+const nightMap = loader.load(assetUrl('textures/night_4k.jpg'));
+const bumpMap = loader.load(assetUrl('textures/elev_bump_4k.jpg'));
+const cloudsMap = loader.load(assetUrl('textures/fair_clouds_8k.jpg'));
+const specularMap = loader.load(assetUrl('textures/2k_earth_specular_map.jpg'));
 
 dayMap.colorSpace = THREE.SRGBColorSpace;
 nightMap.colorSpace = THREE.SRGBColorSpace;
