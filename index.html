@@ -13,9 +13,19 @@
     })();
   </script>
   <style>
+    :root {
+      --edge-top: calc(env(safe-area-inset-top, 0px) + 12px);
+      --edge-right: calc(env(safe-area-inset-right, 0px) + 12px);
+      --edge-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+      --edge-left: calc(env(safe-area-inset-left, 0px) + 12px);
+    }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: system-ui, -apple-system, sans-serif; }
-    canvas { display: block; }
+    html, body {
+      width: 100%; height: 100%; min-height: 100dvh; overflow: hidden;
+      background: #000; font-family: system-ui, -apple-system, sans-serif;
+      overscroll-behavior: none;
+    }
+    canvas { display: block; touch-action: none; }
 
     /* Loader */
     #loader {
@@ -33,7 +43,7 @@
 
     /* Controls Panel */
     #controls {
-      position: fixed; top: 12px; right: 12px; z-index: 10;
+      position: fixed; top: var(--edge-top); right: var(--edge-right); z-index: 10;
       background: rgba(0,0,0,0.75); backdrop-filter: blur(12px);
       border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
       padding: 14px 18px; width: 280px;
@@ -58,13 +68,89 @@
     .slider-row .val { min-width: 32px; text-align: right; font-size: 11px; color: rgba(255,255,255,0.4); font-variant-numeric: tabular-nums; }
 
     #toggle-btn {
-      position: fixed; top: 12px; right: 12px; z-index: 9;
+      position: fixed; top: var(--edge-top); right: var(--edge-right); z-index: 9;
       background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.15);
       border-radius: 8px; color: rgba(255,255,255,0.6); padding: 8px 12px;
       font-size: 12px; cursor: pointer; backdrop-filter: blur(8px);
       transition: opacity 0.3s ease;
     }
     #toggle-btn.hidden { opacity: 0; pointer-events: none; }
+
+    #scene-actions {
+      position: fixed;
+      right: var(--edge-right);
+      bottom: var(--edge-bottom);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #repo-link,
+    #fullscreen-btn,
+    #music-play-btn {
+      width: 38px; height: 38px; padding: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.035);
+      backdrop-filter: blur(12px);
+      color: rgba(242, 245, 252, 0.72);
+      cursor: pointer;
+      transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    }
+    #repo-link {
+      text-decoration: none;
+    }
+    #repo-link:hover,
+    #fullscreen-btn:hover,
+    #music-play-btn:hover {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.18);
+      color: rgba(248, 250, 255, 0.96);
+    }
+    #repo-link:focus-visible,
+    #fullscreen-btn:focus-visible,
+    #music-play-btn:focus-visible {
+      outline: 2px solid rgba(255,255,255,0.28);
+      outline-offset: 2px;
+    }
+    #repo-link svg,
+    #fullscreen-btn svg,
+    #music-play-btn svg {
+      width: 16px; height: 16px;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+    }
+    #music-play-btn .music-icon {
+      position: absolute;
+      inset: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #music-play-btn .music-icon-play {
+      padding-left: 1px;
+    }
+    #music-play-btn .music-icon-pause {
+      display: none;
+    }
+    #music-player.is-playing #music-play-btn .music-icon-play {
+      display: none;
+    }
+    #music-player.is-playing #music-play-btn .music-icon-pause {
+      display: inline-flex;
+    }
+    #fullscreen-btn[hidden] {
+      display: none !important;
+    }
+    html.is-fullscreen #fullscreen-icon-enter,
+    html:not(.is-fullscreen) #fullscreen-icon-exit {
+      display: none;
+    }
 
     html:not(.is-admin) #controls,
     html:not(.is-admin) #toggle-btn,
@@ -77,33 +163,30 @@
       margin: 10px 0 6px; text-transform: uppercase; letter-spacing: 0.4px;
     }
 
-    #credits {
-      position: fixed; bottom: 6px; right: 10px;
-      color: rgba(255,255,255,0.2); font: 10px/1.4 system-ui, sans-serif; z-index: 5;
-    }
-    #credits a { color: rgba(255,255,255,0.3); text-decoration: none; }
-
     /* Music Player */
     #music-player {
-      position: fixed; bottom: 12px; left: 12px; z-index: 10;
-      background: rgba(0,0,0,0.54); backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.08); border-radius: 999px;
+      position: fixed; bottom: var(--edge-bottom); left: var(--edge-left); z-index: 10;
+      background: rgba(0,0,0,0.5); backdrop-filter: blur(10px);
+      border: none; border-radius: 999px;
       padding: 8px 10px; display: flex; align-items: center; gap: 10px;
       color: rgba(255,255,255,0.66); font-size: 11px;
       transition: padding 0.25s ease, gap 0.25s ease, background 0.25s ease, border-color 0.25s ease;
     }
     #music-player.is-playing {
-      border-color: rgba(132, 184, 255, 0.12);
-      background: rgba(4, 10, 18, 0.62);
+      background: rgba(6, 10, 16, 0.6);
     }
-    #music-player.is-collapsed { gap: 0; padding: 8px; }
+    #music-player.is-collapsed {
+      gap: 0;
+      padding: 0;
+      background: transparent;
+      backdrop-filter: none;
+    }
     #music-play-btn {
-      width: 32px; height: 32px; border-radius: 50%; border: none;
-      background: rgba(100, 160, 255, 0.13); color: rgba(132, 184, 255, 0.9);
-      font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-      transition: background 0.2s, transform 0.2s;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      position: relative;
     }
-    #music-play-btn:hover { background: rgba(100, 160, 255, 0.3); }
     #music-player.is-collapsed #music-play-btn { transform: scale(1); }
     #music-panel {
       display: flex; align-items: center; gap: 10px; min-width: 0;
@@ -118,10 +201,8 @@
     #music-artist { font-size: 10px; color: rgba(255,255,255,0.35); }
     #music-waveform {
       display: flex; align-items: flex-end; gap: 2px;
-      min-width: 54px; height: 22px; padding: 4px 6px;
+      min-width: 54px; height: 22px; padding: 2px 0;
       border-radius: 999px;
-      background: linear-gradient(180deg, rgba(69, 113, 178, 0.15), rgba(15, 24, 38, 0.32));
-      border: 1px solid rgba(156, 197, 255, 0.08);
       opacity: 0; transform: translateY(4px) scale(0.98);
       transition: opacity 0.2s ease, transform 0.2s ease;
       pointer-events: none;
@@ -131,18 +212,10 @@
     }
     .wave-bar {
       width: 2px; height: 4px; border-radius: 999px;
-      background: linear-gradient(180deg, rgba(186, 220, 255, 0.96), rgba(92, 144, 232, 0.62));
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.44));
       opacity: 0.24;
       transition: height 0.1s linear, opacity 0.1s linear;
       will-change: height, opacity;
-    }
-    #music-volume {
-      width: 60px; height: 4px; -webkit-appearance: none; appearance: none;
-      background: rgba(255,255,255,0.12); border-radius: 2px; outline: none; cursor: pointer;
-    }
-    #music-volume::-webkit-slider-thumb {
-      -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%;
-      background: rgba(100, 160, 255, 0.9); cursor: pointer;
     }
     #yt-player { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
 
@@ -506,7 +579,7 @@
 
     #quote-selector {
       position: fixed;
-      left: 50%; bottom: 18px;
+      left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
       transform: translateX(-50%);
       display: flex;
       align-items: center;
@@ -630,6 +703,12 @@
         right: 16px;
         width: auto;
       }
+      .quote-variant-starboard {
+        left: auto;
+        right: 16px;
+        width: min(286px, calc(100vw - 32px));
+        text-align: right;
+      }
       .quote-variant-starboard,
       .quote-variant-ledger {
         top: 18px;
@@ -696,7 +775,11 @@
       html:not(.is-admin) .quote-variant-starboard,
       html:not(.is-admin) .quote-variant-ledger {
         top: 18px;
-        right: auto;
+      }
+      html:not(.is-admin) .quote-variant-starboard {
+        left: auto;
+        right: 16px;
+        width: min(248px, calc(100vw - 32px));
       }
       html:not(.is-admin) .quote-variant-journal {
         bottom: 164px;
@@ -706,12 +789,108 @@
         bottom: 88px;
       }
     }
+
+    @media (max-width: 640px) {
+      #controls {
+        left: 12px; right: 12px; width: auto;
+        max-height: min(68vh, calc(100vh - 104px));
+        padding: 14px;
+      }
+      #toggle-btn {
+        padding: 8px 11px;
+      }
+      #scene-actions {
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 78px);
+      }
+      #music-player {
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: calc(100vw - 24px);
+      }
+      #music-panel {
+        max-width: min(248px, calc(100vw - 104px));
+        gap: 8px;
+      }
+      #music-title {
+        max-width: min(112px, 30vw);
+      }
+      #music-waveform {
+        min-width: 46px;
+        padding: 2px 0;
+      }
+      #repo-link {
+        width: 38px;
+      }
+      .quote-kicker {
+        gap: 6px;
+        font-size: 9px;
+        letter-spacing: 0.16em;
+      }
+      .quote-copy {
+        margin-top: 10px;
+      }
+      .quote-name {
+        font-size: 12px;
+      }
+      .quote-role {
+        font-size: 9px;
+        letter-spacing: 0.1em;
+      }
+      html:not(.is-admin) .quote-variant.is-active {
+        opacity: 0.72;
+      }
+      html:not(.is-admin) .quote-variant-starboard,
+      html:not(.is-admin) .quote-variant-ledger,
+      html:not(.is-admin) .quote-variant-broadcast,
+      html:not(.is-admin) .quote-variant-plaque {
+        padding: 12px 14px;
+      }
+      html:not(.is-admin) .quote-variant-starboard {
+        padding: 12px 14px;
+        right: 16px;
+        left: auto;
+        width: min(236px, calc(100vw - 32px));
+      }
+      html:not(.is-admin) .quote-variant-starboard .quote-copy,
+      html:not(.is-admin) .quote-variant-ledger .quote-copy,
+      html:not(.is-admin) .quote-variant-broadcast .quote-copy,
+      html:not(.is-admin) .quote-variant-plaque .quote-copy {
+        font-size: 17px;
+      }
+      html:not(.is-admin) .quote-variant-orbit .quote-copy,
+      html:not(.is-admin) .quote-variant-journal .quote-copy,
+      html:not(.is-admin) .quote-variant-dock .quote-copy {
+        font-size: 16px;
+      }
+    }
   </style>
 </head>
 <body>
   <div id="loader"><div class="spinner"></div></div>
 
   <button id="toggle-btn" class="hidden">Controls</button>
+  <div id="scene-actions">
+    <a id="repo-link" href="https://github.com/GhaythFuad/crew-earth" target="_blank" rel="noopener noreferrer" aria-label="Open the GitHub repository" title="Open the GitHub repository">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M9 18c-4.5 1.4-4.5-2.5-6.5-3"></path>
+        <path d="M15 21v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 19 3.77 5.07 5.07 0 0 0 18.91 1S17.73.65 15 2.48a13.38 13.38 0 0 0-6 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 3.77 5.44 5.44 0 0 0 3.5 7.52c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 17.13V21"></path>
+      </svg>
+    </a>
+    <button id="fullscreen-btn" type="button" aria-label="Enter fullscreen" title="Enter fullscreen">
+      <svg id="fullscreen-icon-enter" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M10 14 4 20"></path>
+        <path d="M4 15v5h5"></path>
+        <path d="M14 10 20 4"></path>
+        <path d="M15 4h5v5"></path>
+      </svg>
+      <svg id="fullscreen-icon-exit" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 20 10 14"></path>
+        <path d="M10 19v-5H5"></path>
+        <path d="M20 4 14 10"></path>
+        <path d="M14 5v5h5"></path>
+      </svg>
+    </button>
+  </div>
 
   <div id="controls">
     <h3>Earth Controls</h3>
@@ -840,6 +1019,36 @@
       </div>
     </div>
 
+    <div class="section-title">Framing</div>
+    <div class="control-group">
+      <label>View Azimuth</label>
+      <div class="slider-row">
+        <input type="range" id="viewAzimuth" min="-90" max="90" step="1" value="40">
+        <span class="val" id="viewAzimuth-val">40</span>
+      </div>
+    </div>
+    <div class="control-group">
+      <label>View Elevation</label>
+      <div class="slider-row">
+        <input type="range" id="viewElevation" min="-45" max="45" step="1" value="0">
+        <span class="val" id="viewElevation-val">0</span>
+      </div>
+    </div>
+    <div class="control-group">
+      <label>Earth Yaw Offset</label>
+      <div class="slider-row">
+        <input type="range" id="earthYawOffset" min="-180" max="180" step="1" value="0">
+        <span class="val" id="earthYawOffset-val">0</span>
+      </div>
+    </div>
+    <div class="control-group">
+      <label>Earth Tilt Offset</label>
+      <div class="slider-row">
+        <input type="range" id="earthTiltOffset" min="-20" max="20" step="0.5" value="0">
+        <span class="val" id="earthTiltOffset-val">0</span>
+      </div>
+    </div>
+
     <div class="section-title">Motion</div>
     <div class="control-group">
       <label>Rotation Speed</label>
@@ -961,7 +1170,19 @@
   </aside>
 
   <div id="music-player" class="is-collapsed">
-    <button id="music-play-btn" title="Play/Pause">&#9654;</button>
+    <button id="music-play-btn" type="button" title="Play soundtrack" aria-label="Play soundtrack">
+      <span class="music-icon music-icon-play" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M8 6.5 17 12l-9 5.5z"></path>
+        </svg>
+      </span>
+      <span class="music-icon music-icon-pause" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M9 6v12"></path>
+          <path d="M15 6v12"></path>
+        </svg>
+      </span>
+    </button>
     <div id="music-panel">
       <div id="music-info">
         <span id="music-title">Asylums for the Feeling</span>
@@ -981,21 +1202,72 @@
         <span class="wave-bar"></span>
         <span class="wave-bar"></span>
       </div>
-      <input type="range" id="music-volume" min="0" max="100" value="50" title="Volume">
     </div>
   </div>
 
   <div id="yt-player"></div>
 
-  <div id="credits">Textures: <a href="https://www.shadedrelief.com/natural3/" target="_blank" rel="noopener">Natural Earth III</a> / NASA</div>
   <script type="module" src="/src/main.js"></script>
   <script type="module" src="/src/quote-ui.js"></script>
   <script>
+    var fullscreenBtn = document.getElementById('fullscreen-btn');
+
+    function getFullscreenElement() {
+      return document.fullscreenElement || document.webkitFullscreenElement || null;
+    }
+
+    function syncFullscreenUi() {
+      var isFullscreen = !!getFullscreenElement();
+      document.documentElement.classList.toggle('is-fullscreen', isFullscreen);
+
+      if (!fullscreenBtn) return;
+
+      var nextLabel = isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen';
+      fullscreenBtn.setAttribute('aria-label', nextLabel);
+      fullscreenBtn.title = nextLabel;
+    }
+
+    function requestDocumentFullscreen() {
+      var root = document.documentElement;
+      if (root.requestFullscreen) return root.requestFullscreen();
+      if (root.webkitRequestFullscreen) return root.webkitRequestFullscreen();
+      return null;
+    }
+
+    function exitDocumentFullscreen() {
+      if (document.exitFullscreen) return document.exitFullscreen();
+      if (document.webkitExitFullscreen) return document.webkitExitFullscreen();
+      return null;
+    }
+
+    if (fullscreenBtn) {
+      var fullscreenSupported = !!(
+        document.documentElement.requestFullscreen ||
+        document.documentElement.webkitRequestFullscreen ||
+        document.fullscreenEnabled ||
+        document.webkitFullscreenEnabled
+      );
+
+      if (!fullscreenSupported) {
+        fullscreenBtn.hidden = true;
+      } else {
+        fullscreenBtn.addEventListener('click', function() {
+          var result = getFullscreenElement() ? exitDocumentFullscreen() : requestDocumentFullscreen();
+          if (result && typeof result.catch === 'function') {
+            result.catch(function() {});
+          }
+        });
+
+        document.addEventListener('fullscreenchange', syncFullscreenUi);
+        document.addEventListener('webkitfullscreenchange', syncFullscreenUi);
+        syncFullscreenUi();
+      }
+    }
+
     // YouTube IFrame API (audio-only player)
     var ytPlayer;
     var musicPlayer = document.getElementById('music-player');
     var musicPlayBtn = document.getElementById('music-play-btn');
-    var musicVolume = document.getElementById('music-volume');
     var musicWaveform = document.getElementById('music-waveform');
     var waveformBars = Array.from(musicWaveform.querySelectorAll('.wave-bar'));
     var waveformFrame = null;
@@ -1041,7 +1313,7 @@
         currentTime = 0;
       }
 
-      var volume = parseInt(musicVolume.value, 10) / 100;
+      var volume = 0.5;
 
       waveformBars.forEach(function(bar, index) {
         var wave = Math.sin(currentTime * 3.4 + waveformOffsets[index]) * 0.5 + 0.5;
@@ -1071,7 +1343,9 @@
             setWaveformIdle();
           },
           onStateChange: function(e) {
-            musicPlayBtn.innerHTML = (e.data === YT.PlayerState.PLAYING) ? '&#9646;&#9646;' : '&#9654;';
+            var isPlaying = e.data === YT.PlayerState.PLAYING;
+            musicPlayBtn.title = isPlaying ? 'Pause soundtrack' : 'Play soundtrack';
+            musicPlayBtn.setAttribute('aria-label', isPlaying ? 'Pause soundtrack' : 'Play soundtrack');
             if (e.data === YT.PlayerState.PLAYING) {
               expandMusicPlayer();
               startWaveform();
@@ -1093,10 +1367,6 @@
       } else {
         ytPlayer.playVideo();
       }
-    });
-
-    musicVolume.addEventListener('input', function() {
-      if (ytPlayer && ytPlayer.setVolume) ytPlayer.setVolume(parseInt(this.value));
     });
 
     setWaveformIdle();

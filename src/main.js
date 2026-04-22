@@ -23,6 +23,149 @@ controls.enablePan = false;
 controls.minDistance = 1.3;
 controls.maxDistance = 10;
 
+const AXIAL_TILT_DEGREES = 23 + 27 / 60;
+const AXIAL_TILT_RADIANS = THREE.MathUtils.degToRad(AXIAL_TILT_DEGREES);
+const SIDEREAL_DAY_SECONDS = 23.9344696 * 3600;
+const EARTH_ANGULAR_RATE = (Math.PI * 2) / SIDEREAL_DAY_SECONDS;
+const CLOUD_RELATIVE_DRIFT = 0.018;
+const DEFAULT_SCIENCE_START_UTC = '2026-04-21T20:00:00Z';
+const queryParams = new URLSearchParams(window.location.search);
+const baseCameraPosition = new THREE.Vector3();
+const baseCameraTarget = new THREE.Vector3();
+let framingStateInitialized = false;
+
+function isLeapYear(year) {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
+
+function getUtcDayOfYear(date) {
+  const start = Date.UTC(date.getUTCFullYear(), 0, 0);
+  const current = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  return Math.round((current - start) / 86400000);
+}
+
+function normalizeDegrees180(degrees) {
+  const wrapped = ((degrees + 180) % 360 + 360) % 360 - 180;
+  return wrapped === -180 ? 180 : wrapped;
+}
+
+function wrapRadians(radians) {
+  return Math.atan2(Math.sin(radians), Math.cos(radians));
+}
+
+function readScienceStartDate() {
+  const utcOverride = queryParams.get('utc');
+  if (utcOverride) {
+    const parsed = new Date(utcOverride);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+  return new Date(DEFAULT_SCIENCE_START_UTC);
+}
+
+function computeSolarState(date) {
+  const dayOfYear = getUtcDayOfYear(date);
+  const hoursUtc =
+    date.getUTCHours() +
+    date.getUTCMinutes() / 60 +
+    date.getUTCSeconds() / 3600 +
+    date.getUTCMilliseconds() / 3600000;
+  const yearLength = isLeapYear(date.getUTCFullYear()) ? 366 : 365;
+  const gamma = (Math.PI * 2 / yearLength) * (dayOfYear - 1 + (hoursUtc - 12) / 24);
+
+  // NOAA's compact solar model gives us a stable declination/equation-of-time pair.
+  const equationOfTime =
+    229.18 * (
+      0.000075 +
+      0.001868 * Math.cos(gamma) -
+      0.032077 * Math.sin(gamma) -
+      0.014615 * Math.cos(2 * gamma) -
+      0.040849 * Math.sin(2 * gamma)
+    );
+
+  const solarDeclination =
+    0.006918 -
+    0.399912 * Math.cos(gamma) +
+    0.070257 * Math.sin(gamma) -
+    0.006758 * Math.cos(2 * gamma) +
+    0.000907 * Math.sin(2 * gamma) -
+    0.002697 * Math.cos(3 * gamma) +
+    0.00148 * Math.sin(3 * gamma);
+
+  const utcMinutes = hoursUtc * 60;
+  const subsolarLongitudeDegrees = normalizeDegrees180(180 - (utcMinutes + equationOfTime) / 4);
+
+  return {
+    equationOfTime,
+    solarDeclination,
+    subsolarLongitudeRadians: THREE.MathUtils.degToRad(subsolarLongitudeDegrees),
+  };
+}
+
+const scienceStartDate = readScienceStartDate();
+let scienceTimeMs = scienceStartDate.getTime();
+let cloudLongitudeOffset = 0;
+const tiltQuaternion = new THREE.Quaternion().setFromAxisAngle(
+  new THREE.Vector3(0, 0, 1),
+  AXIAL_TILT_RADIANS,
+);
+
+let viewportMode = '';
+
+function getViewportMode() {
+  const isPortrait = window.innerHeight > window.innerWidth;
+  if (window.innerWidth <= 640 && isPortrait) {
+    return 'mobile-portrait';
+  }
+  if (window.innerWidth <= 820) {
+    return 'compact';
+  }
+  return 'desktop';
+}
+
+function applyResponsiveViewport(force = false) {
+  const nextMode = getViewportMode();
+
+  if (force || nextMode !== viewportMode) {
+    if (nextMode === 'mobile-portrait') {
+      camera.fov = 50;
+      baseCameraPosition.set(-1.18, 0.56, 4.92);
+      controls.minDistance = 1.6;
+      controls.maxDistance = 12;
+      baseCameraTarget.set(0.02, 0.05, 0);
+    } else if (nextMode === 'compact') {
+      camera.fov = 47;
+      baseCameraPosition.set(-1.36, 0.72, 4.34);
+      controls.minDistance = 1.45;
+      controls.maxDistance = 11;
+      baseCameraTarget.set(0.02, 0.03, 0);
+    } else {
+      camera.fov = 45;
+      baseCameraPosition.set(-1.55, 0.86, 3.98);
+      controls.minDistance = 1.3;
+      controls.maxDistance = 10;
+      baseCameraTarget.set(0.03, 0.03, 0);
+    }
+
+    viewportMode = nextMode;
+  }
+
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  if (framingStateInitialized) {
+    updateCameraFraming();
+  } else {
+    camera.position.copy(baseCameraPosition);
+    controls.target.copy(baseCameraTarget);
+    camera.lookAt(baseCameraTarget);
+  }
+}
+
+applyResponsiveViewport(true);
+
 // ── Texture Loading (4K versions for performance) ──────────────────────
 const manager = new THREE.LoadingManager();
 const loader = new THREE.TextureLoader(manager);
@@ -46,16 +189,19 @@ nightMap.colorSpace = THREE.SRGBColorSpace;
 });
 
 // ── Lighting ───────────────────────────────────────────────────────────
-const sunDir = new THREE.Vector3(4, 1, 3).normalize();
+const sunDir = new THREE.Vector3(1, 0, 0);
 const dirLight = new THREE.DirectionalLight(0xffffff, 3.0);
 dirLight.position.copy(sunDir.clone().multiplyScalar(10));
 scene.add(dirLight);
 scene.add(new THREE.AmbientLight(0x060612, 0.03));
 
 // ── Earth Group ────────────────────────────────────────────────────────
-const earthGroup = new THREE.Group();
-earthGroup.rotation.z = 23.4 * Math.PI / 180;
-scene.add(earthGroup);
+const earthTiltGroup = new THREE.Group();
+earthTiltGroup.quaternion.copy(tiltQuaternion);
+scene.add(earthTiltGroup);
+
+const earthSpinGroup = new THREE.Group();
+earthTiltGroup.add(earthSpinGroup);
 
 // ── Earth Shader ───────────────────────────────────────────────────────
 const earthUniforms = {
@@ -289,7 +435,7 @@ const earthMesh = new THREE.Mesh(
     `,
   })
 );
-earthGroup.add(earthMesh);
+earthSpinGroup.add(earthMesh);
 
 // ── Cloud Layer ────────────────────────────────────────────────────────
 const cloudMat = new THREE.MeshPhongMaterial({
@@ -300,7 +446,7 @@ const cloudMat = new THREE.MeshPhongMaterial({
   depthWrite: false,
 });
 const cloudMesh = new THREE.Mesh(new THREE.SphereGeometry(1.007, 64, 64), cloudMat);
-earthGroup.add(cloudMesh);
+earthSpinGroup.add(cloudMesh);
 
 // ── Atmosphere ─────────────────────────────────────────────────────────
 const atmosUniforms = {
@@ -370,7 +516,24 @@ const atmosMesh = new THREE.Mesh(
     blending: THREE.AdditiveBlending,
   })
 );
-earthGroup.add(atmosMesh);
+earthSpinGroup.add(atmosMesh);
+
+function updateScientificOrientation(date) {
+  const solarState = computeSolarState(date);
+  const localSunDirection = new THREE.Vector3(
+    Math.cos(solarState.solarDeclination),
+    Math.sin(solarState.solarDeclination),
+    0,
+  );
+  const worldSunDirection = localSunDirection.applyQuaternion(earthTiltGroup.quaternion).normalize();
+
+  sunDir.copy(worldSunDirection);
+  dirLight.position.copy(worldSunDirection.clone().multiplyScalar(10));
+
+  earthSpinGroup.rotation.y = solarState.subsolarLongitudeRadians + THREE.MathUtils.degToRad(state.earthYawOffset);
+  cloudMesh.rotation.y = wrapRadians(earthSpinGroup.rotation.y + cloudLongitudeOffset);
+  earthUniforms.cloudRotation.value = wrapRadians(cloudMesh.rotation.y - earthSpinGroup.rotation.y) / (Math.PI * 2);
+}
 
 // ── Star Field ─────────────────────────────────────────────────────────
 // Two layers: dense tiny dots (background grain) + fewer brighter stars
@@ -425,7 +588,37 @@ scene.add(new THREE.Points(starGeo, starMat));
 const state = {
   rotationSpeed: 0.0001,
   drift: 0.02,
+  viewAzimuth: 0,
+  viewElevation: 0,
+  earthYawOffset: 0,
+  earthTiltOffset: 0,
 };
+
+function updateCameraFraming() {
+  const relative = baseCameraPosition.clone().sub(baseCameraTarget);
+  const azimuthRadians = THREE.MathUtils.degToRad(state.viewAzimuth);
+  const elevationRadians = THREE.MathUtils.degToRad(state.viewElevation);
+
+  relative.applyAxisAngle(new THREE.Vector3(0, 1, 0), azimuthRadians);
+
+  const rightAxis = new THREE.Vector3().crossVectors(relative, new THREE.Vector3(0, 1, 0)).normalize();
+  if (rightAxis.lengthSq() > 0.000001) {
+    relative.applyAxisAngle(rightAxis, elevationRadians);
+  }
+
+  camera.position.copy(baseCameraTarget).add(relative);
+  controls.target.copy(baseCameraTarget);
+  camera.lookAt(baseCameraTarget);
+}
+
+function updateEarthTiltOrientation() {
+  const tiltOffsetRadians = THREE.MathUtils.degToRad(state.earthTiltOffset);
+  const tiltOffsetQuaternion = new THREE.Quaternion().setFromAxisAngle(
+    new THREE.Vector3(0, 0, 1),
+    tiltOffsetRadians,
+  );
+  earthTiltGroup.quaternion.copy(tiltQuaternion).multiply(tiltOffsetQuaternion);
+}
 
 function bindSlider(id, callback) {
   const el = document.getElementById(id);
@@ -461,8 +654,30 @@ bindSlider('nightLights', v => earthUniforms.nightBrightness.value = v);
 bindSlider('terminator', v => earthUniforms.terminatorSoft.value = v);
 bindSlider('bumpStrength', v => earthUniforms.bumpStrength.value = v);
 bindSlider('surfaceSoftness', v => earthUniforms.surfaceSoftness.value = v);
+bindSlider('viewAzimuth', v => {
+  state.viewAzimuth = v;
+  updateCameraFraming();
+});
+bindSlider('viewElevation', v => {
+  state.viewElevation = v;
+  updateCameraFraming();
+});
+bindSlider('earthYawOffset', v => {
+  state.earthYawOffset = v;
+  updateScientificOrientation(new Date(scienceTimeMs));
+});
+bindSlider('earthTiltOffset', v => {
+  state.earthTiltOffset = v;
+  updateEarthTiltOrientation();
+  updateScientificOrientation(new Date(scienceTimeMs));
+});
 bindSlider('rotationSpeed', v => state.rotationSpeed = v);
 bindSlider('drift', v => state.drift = v);
+
+framingStateInitialized = true;
+updateEarthTiltOrientation();
+updateScientificOrientation(new Date(scienceTimeMs));
+updateCameraFraming();
 
 // Toggle controls panel
 const panel = document.getElementById('controls');
@@ -481,9 +696,7 @@ renderer.domElement.addEventListener('click', (e) => {
 
 // ── Resize ─────────────────────────────────────────────────────────────
 window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  applyResponsiveViewport();
 });
 
 // ── Animation ──────────────────────────────────────────────────────────
@@ -491,14 +704,17 @@ const clock = new THREE.Clock();
 
 function animate() {
   requestAnimationFrame(animate);
-  const elapsed = clock.getElapsedTime();
+  const delta = clock.getDelta();
+  const elapsed = clock.elapsedTime;
+  const visualAngularVelocity = state.rotationSpeed * 60;
+  const scienceTimeScale = visualAngularVelocity / EARTH_ANGULAR_RATE;
 
-  earthMesh.rotation.y += state.rotationSpeed;
-  cloudMesh.rotation.y += state.rotationSpeed * 1.25;
-  earthUniforms.cloudRotation.value = (cloudMesh.rotation.y - earthMesh.rotation.y) / (Math.PI * 2);
+  scienceTimeMs += delta * scienceTimeScale * 1000;
+  cloudLongitudeOffset = wrapRadians(cloudLongitudeOffset + visualAngularVelocity * CLOUD_RELATIVE_DRIFT * delta);
+  updateScientificOrientation(new Date(scienceTimeMs));
 
-  earthGroup.position.x = Math.sin(elapsed * 0.08) * state.drift;
-  earthGroup.position.y = Math.cos(elapsed * 0.12) * state.drift * 0.7;
+  earthTiltGroup.position.x = Math.sin(elapsed * 0.08) * state.drift;
+  earthTiltGroup.position.y = Math.cos(elapsed * 0.12) * state.drift * 0.7;
 
   starMat.uniforms.time.value = elapsed;
 

@@ -1,48 +1,95 @@
-# Earth
+# Crew Earth
 
-A realistic 3D Earth visualization built with Three.js. Features day/night cycle, cloud layers, atmospheric scattering, ocean specular highlights, and a star field.
+An interactive Three.js portrait of Earth built around one idea from astronaut Christina Koch's Artemis II homecoming remarks: Earth is not just a planet to look at, but a shared vessel to care for.
 
-## Prerequisites
+[Live site](https://ghaythfuad.github.io/crew-earth/) • [GitHub repo](https://github.com/GhaythFuad/crew-earth)
 
-- Node.js (v18+)
+## Inspiration
 
-## Setup
+This project was inspired by Christina Koch's reflection after Artemis II, where she described Earth as a shared lifeboat in space and said, "planet Earth, you are a crew."
+
+
+[![Christina Koch's "planet Earth, you are a crew" remarks](https://img.youtube.com/vi/8yhqwxJWWhg/hqdefault.jpg)](https://www.youtube.com/shorts/8yhqwxJWWhg)
+
+Additional context:
+
+- [NASA Curious Universe transcript: Artemis II crew comes home](https://www.nasa.gov/podcasts/curious-universe/artemis-ii-crew-comes-home/)
+- [Essay that helped shape this direction](https://michelecaracappa.substack.com/p/planet-earth-you-are-a-crew-lessons)
+
+## What The Project Does
+
+`Crew Earth` renders a stylized-but-grounded view of Earth in space with:
+
+- day and night texture blending
+- an atmospheric rim and inner scattering
+- cloud layers and cloud shadows
+- ocean highlights and city lights
+- a quote treatment inspired by Christina Koch's words
+- a minimal audio player and fullscreen mode
+- a public presentation mode plus an admin tuning mode
+
+## Stack
+
+- [Three.js](https://threejs.org/) for rendering
+- [Vite](https://vite.dev/) for development and build tooling
+- Static assets under [`public/textures`](public/textures)
+
+## Assets And Attribution
+
+- Earth surface base imagery is derived from [Natural Earth III](https://www.shadedrelief.com/natural3/) by Tom Patterson.
+- Additional Earth/night and related reference material comes from [NASA](https://www.nasa.gov/).
+- The project soundtrack currently points to [Silent Poets - Asylums for the Feeling](https://www.youtube.com/watch?v=R2t8pHCbVFc) via an embedded YouTube player.
+
+## Running Locally
+
+Prerequisites:
+
+- Node.js 18+
+
+Install dependencies:
 
 ```bash
 npm install
 ```
 
-## Run
+Start the dev server:
 
 ```bash
 npm run dev
 ```
 
-Opens at [http://localhost:5173](http://localhost:5173).
+Vite will print the local URL in the terminal, usually `http://localhost:5173`.
 
-## Build for Production
+## Build
 
 ```bash
 npm run build
 npm run preview
 ```
 
-## Deploy to GitHub Pages
+## Interaction
 
-This project includes a GitHub Actions workflow at `.github/workflows/deploy.yml`.
+Public mode:
 
-Once the repository is pushed to GitHub:
+- drag to orbit
+- scroll or pinch to zoom
+- use the fullscreen button for an immersive view
+- tap the play button to reveal the soundtrack controls and waveform
 
-1. Open the repository `Settings`
-2. Go to `Pages`
-3. Set the source to `GitHub Actions`
-4. Push to `main`
+Admin mode:
 
-The workflow will build the Vite app and publish `dist/` to GitHub Pages automatically.
+- open the site with `?admin=1`
+- adjust surface, atmosphere, lighting, clouds, and motion from the control panel
+- switch between quote layouts while tuning the presentation
 
-## Controls
+## Deployment
 
-- **Drag** to orbit around the Earth
-- **Scroll** to zoom in/out
-- Use the **slider panel** (top-right) to adjust saturation, brightness, atmosphere, clouds, lighting, and more
-- Click the canvas to collapse the panel; click **Controls** button to reopen it
+This repo is configured for GitHub Pages with GitHub Actions.
+
+Once GitHub Pages is set to `GitHub Actions`, every push to `main` rebuilds and publishes the site automatically through [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml).
+
+## Notes
+
+- The project currently prioritizes a cinematic Earth presentation that is being tuned toward stronger science accuracy.
+- Texture paths are configured to work both locally and on GitHub Pages.
+- The default public quote treatment is intentionally subtle so the planet stays the primary visual subject.
