@@ -29,6 +29,7 @@ const SIDEREAL_DAY_SECONDS = 23.9344696 * 3600;
 const EARTH_ANGULAR_RATE = (Math.PI * 2) / SIDEREAL_DAY_SECONDS;
 const CLOUD_RELATIVE_DRIFT = 0.018;
 const DEFAULT_SCIENCE_START_UTC = '2026-04-21T20:00:00Z';
+const DEFAULT_VIEW_DISTANCE_SCALE = 1.25;
 const queryParams = new URLSearchParams(window.location.search);
 const baseCameraPosition = new THREE.Vector3();
 const baseCameraTarget = new THREE.Vector3();
@@ -147,6 +148,11 @@ function applyResponsiveViewport(force = false) {
       controls.maxDistance = 10;
       baseCameraTarget.set(0.03, 0.03, 0);
     }
+
+    baseCameraPosition
+      .sub(baseCameraTarget)
+      .multiplyScalar(DEFAULT_VIEW_DISTANCE_SCALE)
+      .add(baseCameraTarget);
 
     viewportMode = nextMode;
   }

@@ -803,8 +803,9 @@
         bottom: calc(env(safe-area-inset-bottom, 0px) + 78px);
       }
       #music-player {
-        left: 50%;
-        transform: translateX(-50%);
+        left: var(--edge-left);
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 78px);
+        transform: none;
         max-width: calc(100vw - 24px);
       }
       #music-panel {
